@@ -13,7 +13,9 @@ import {
   Moon,
   FolderOpen,
   Save,
-  BookmarkCheck
+  BookmarkCheck,
+  LayoutGrid,
+  Columns
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { 
@@ -37,7 +39,7 @@ const INITIAL_CARGO_ITEMS: CargoItem[] = [
     id: 'item_1',
     Priority: 1,
     Reference: 'Euro Pallet (Standard)',
-    Quantity: 24,
+    Quantity: 36, // 36 units: more than 1 TIR truck (33 pallets max)!
     Length: 120.0,
     Width: 80.0,
     Height: 140.0,
@@ -81,7 +83,7 @@ export default function App() {
 
   // State
   const [transportType, setTransportType] = useState<string>('TIR (Semi-trailer)');
-  const [maxVehicles, setMaxVehicles] = useState<number>(2);
+  const [maxVehicles, setMaxVehicles] = useState<number>(3);
   const [rules, setRules] = useState<OptimizationRules>(DEFAULT_RULES);
   const [cargoItems, setCargoItems] = useState<CargoItem[]>(INITIAL_CARGO_ITEMS);
   const [colorMap, setColorMap] = useState<Record<string, string>>({
@@ -100,12 +102,13 @@ export default function App() {
 
   // Saved Configurations State
   const [savedConfigs, setSavedConfigs] = useState<Record<string, CargoItem[]>>({
-    'Weekly Distribution Fleet': INITIAL_CARGO_ITEMS,
+    'Multi-Truck Fleet Order': INITIAL_CARGO_ITEMS,
   });
   const [selectedSavedMix, setSelectedSavedMix] = useState<string>('');
 
-  const [projectName, setProjectName] = useState<string>('Standard Logistics Project');
+  const [projectName, setProjectName] = useState<string>('Fleet Logistics Order');
   const [vehicles, setVehicles] = useState<PackedVehicle[]>([]);
+  const [viewMode, setViewMode] = useState<'all' | 'tabs'>('all');
   const [activeVehicleIndex, setActiveVehicleIndex] = useState<number>(0);
   const [isCalculated, setIsCalculated] = useState<boolean>(false);
   const [unplacedCount, setUnplacedCount] = useState<number>(0);
@@ -118,9 +121,7 @@ export default function App() {
 
   const currentContainer = CONTAINERS[transportType] || CONTAINERS['TIR (Semi-trailer)'];
 
-  // Handle calculation with priority loading order
   const handleCalculate = () => {
-    // Sort items by priority (1 = first loaded / deepest against the front cab)
     const sortedCargo = [...cargoItems].sort((a, b) => a.Priority - b.Priority);
     const result = runCargoOptimization(sortedCargo, transportType, maxVehicles, rules);
     setVehicles(result.vehicles);
@@ -184,7 +185,9 @@ export default function App() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const activeVehicle = vehicles[activeVehicleIndex] || vehicles[0];
+  const displayedVehicles = viewMode === 'all' 
+    ? vehicles 
+    : [vehicles[activeVehicleIndex] || vehicles[0]].filter(Boolean);
 
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
@@ -195,7 +198,6 @@ export default function App() {
         isLight ? 'bg-white/95 border-slate-200' : 'bg-slate-900/90 border-slate-800 backdrop-blur-md'
       }`}>
         <div className="w-full max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-4">
-          {/* Logo & App title */}
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/25">
               <Box className="w-5 h-5" />
@@ -206,7 +208,7 @@ export default function App() {
                   3D Cargo Optimizer
                 </h1>
                 <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30">
-                  Multi-Vehicle 16:9
+                  Multi-Truck 16:9
                 </span>
               </div>
               <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -215,7 +217,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Quick Stats, Theme Switcher & Actions */}
           <div className="flex flex-wrap items-center gap-2.5 text-xs">
             {/* Theme Toggle (Light / Dark) */}
             <button
@@ -256,7 +257,6 @@ export default function App() {
                   ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300' 
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
               }`}
-              title="View and download complete app.py single-file code"
             >
               <Code2 className="w-3.5 h-3.5 text-emerald-500" />
               Python Code (`app.py`)
@@ -343,7 +343,7 @@ export default function App() {
                 <input
                   type="number"
                   min="1"
-                  max="10"
+                  max="15"
                   value={maxVehicles}
                   onChange={(e) => setMaxVehicles(parseInt(e.target.value) || 1)}
                   className={`w-full mt-1 border rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
@@ -434,7 +434,6 @@ export default function App() {
                   className={`px-3 py-1.5 border rounded-lg text-xs font-medium transition flex items-center gap-1 shrink-0 disabled:opacity-40 ${
                     isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
                   }`}
-                  title="Load selected mix into cargo list"
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
                   Load
@@ -445,7 +444,6 @@ export default function App() {
                   className={`px-3 py-1.5 border rounded-lg text-xs font-medium transition flex items-center gap-1 shrink-0 ${
                     isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
                   }`}
-                  title="Copy direct share link"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   Share
@@ -456,11 +454,11 @@ export default function App() {
         </div>
 
         {/* ========================================================= */}
-        {/* RIGHT COLUMN: 16:9 CARGO MANIFEST & 3D VISUALIZER (col 5-12) */}
+        {/* RIGHT COLUMN: 16:9 CARGO MANIFEST & MULTI-TRUCK 3D VISUALIZER (col 5-12) */}
         {/* ========================================================= */}
         <div className="lg:col-span-8 xl:col-span-8 space-y-6 w-full">
 
-          {/* 1. CARGO MANIFEST (16:9 optimized, no horizontal scrollbar) */}
+          {/* 1. CARGO MANIFEST */}
           <CargoTable
             items={cargoItems}
             onChange={setCargoItems}
@@ -480,133 +478,206 @@ export default function App() {
             onUpdateLibrary={setProductLib}
           />
 
-          {/* 2. 3D OPTIMIZATION RESULTS */}
-          <div className="space-y-4">
+          {/* 2. 3D OPTIMIZATION RESULTS - MULTI-TRUCK SIMULTANEOUS DISPLAY */}
+          <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className={`text-base font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
                   <Box className="w-5 h-5 text-blue-500" />
-                  Interactive 3D Fleet Packing Visualizer
+                  Fleet Packing 3D Visualizer
                 </h2>
                 <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Dynamic 3D meshes, edge wireframes, and live measurement lines floating above ceiling
+                  {vehicles.length > 0 
+                    ? `Showing ${vehicles.length} vehicle(s) deployed for this cargo manifesto`
+                    : 'Click Calculate Fleet to generate 3D models'}
                 </p>
               </div>
 
-              {/* Vehicle Switcher Tabs */}
-              {vehicles.length > 0 && (
-                <div className={`flex items-center gap-1.5 p-1 rounded-xl border ${
+              {/* View Mode Controls: All Trucks Stacked vs Tab Switcher */}
+              {vehicles.length > 1 && (
+                <div className={`flex items-center gap-1 p-1 rounded-xl border text-xs ${
                   isLight ? 'bg-slate-200 border-slate-300' : 'bg-slate-900 border-slate-800'
                 }`}>
-                  {vehicles.map((v, idx) => (
-                    <button
-                      key={v.vehicleId}
-                      onClick={() => setActiveVehicleIndex(idx)}
-                      className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
-                        activeVehicleIndex === idx
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                      }`}
-                    >
-                      {v.name}
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => setViewMode('all')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition ${
+                      viewMode === 'all' 
+                        ? 'bg-blue-600 text-white shadow-sm' 
+                        : isLight ? 'text-slate-700 hover:bg-slate-100' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Columns className="w-3.5 h-3.5" />
+                    All Trucks Stacked ({vehicles.length})
+                  </button>
+
+                  <button
+                    onClick={() => setViewMode('tabs')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition ${
+                      viewMode === 'tabs' 
+                        ? 'bg-blue-600 text-white shadow-sm' 
+                        : isLight ? 'text-slate-700 hover:bg-slate-100' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    Tabs View
+                  </button>
                 </div>
               )}
             </div>
+
+            {/* If in Tabs mode, show the vehicle buttons */}
+            {viewMode === 'tabs' && vehicles.length > 1 && (
+              <div className={`flex items-center gap-2 p-1.5 rounded-xl border overflow-x-auto ${
+                isLight ? 'bg-slate-200/80 border-slate-300' : 'bg-slate-900 border-slate-800'
+              }`}>
+                {vehicles.map((v, idx) => (
+                  <button
+                    key={v.vehicleId}
+                    onClick={() => setActiveVehicleIndex(idx)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition whitespace-nowrap ${
+                      activeVehicleIndex === idx
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : isLight ? 'bg-white text-slate-700 border border-slate-300' : 'bg-slate-800 text-slate-300 border border-slate-700'
+                    }`}
+                  >
+                    🚚 Vehicle #{idx + 1}: {v.name} ({v.items.length} units &bull; {v.volFillRate.toFixed(1)}%)
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Unplaced items alert if any */}
             {unplacedCount > 0 && (
               <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-600 dark:text-amber-300 text-xs flex items-center gap-2.5">
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
                 <span>
-                  <b>Capacity Alert:</b> {unplacedCount} item(s) could not fit in the allocated fleet ({maxVehicles} vehicle(s)). Please increase the maximum number of vehicles to pack all cargo.
+                  <b>Fleet Capacity Alert:</b> {unplacedCount} items could not fit inside the currently allocated {maxVehicles} vehicle(s). Increase maximum vehicles to pack everything.
                 </span>
               </div>
             )}
 
-            {/* Vehicle Card & 3D Viewer */}
-            {activeVehicle ? (
-              <div className="space-y-3">
-                {/* Metrics Banner */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                  <div className={`p-3 rounded-xl border shadow-sm ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold">Volume Fill Rate</span>
-                    <div className="text-xl font-black text-blue-600 dark:text-blue-400 mt-0.5">
-                      {activeVehicle.volFillRate.toFixed(1)}%
-                    </div>
-                    <span className="text-[11px] text-slate-500">
-                      {(activeVehicle.usedVolume / 1e6).toFixed(1)} / {(activeVehicle.totalVolume / 1e6).toFixed(1)} m³
-                    </span>
-                  </div>
+            {/* RENDER ALL VEHICLES (Stacked or Tabbed) */}
+            {displayedVehicles.length > 0 ? (
+              <div className="space-y-8">
+                {displayedVehicles.map((vehicle, vIdx) => {
+                  const actualIndex = viewMode === 'all' ? vIdx : activeVehicleIndex;
 
-                  <div className={`p-3 rounded-xl border shadow-sm ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold">Used Length</span>
-                    <div className={`text-xl font-black mt-0.5 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                      {activeVehicle.usedLength.toFixed(1)} <span className="text-xs font-normal text-slate-500">cm</span>
-                    </div>
-                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">Solid Blue Line</span>
-                  </div>
+                  return (
+                    <div 
+                      key={vehicle.vehicleId} 
+                      className={`p-4 rounded-2xl border shadow-lg space-y-3.5 transition-colors ${
+                        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                      }`}
+                    >
+                      {/* Truck Title & Summary Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 rounded-lg bg-blue-600 text-white font-bold text-xs">
+                            #{actualIndex + 1}
+                          </div>
+                          <div>
+                            <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                              Vehicle #{actualIndex + 1}: {vehicle.name}
+                            </h3>
+                            <p className="text-xs text-slate-500">
+                              {vehicle.items.length} packed units &bull; Dimensions: {vehicle.container.L} × {vehicle.container.W} × {vehicle.container.H} cm
+                            </p>
+                          </div>
+                        </div>
 
-                  <div className={`p-3 rounded-xl border shadow-sm ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold">Remaining Space</span>
-                    <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                      {activeVehicle.remainingLength.toFixed(1)} <span className="text-xs font-normal text-slate-500">cm</span>
-                    </div>
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Dashed Green Line</span>
-                  </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                            vehicle.volFillRate >= 90
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400'
+                              : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-400'
+                          }`}>
+                            Fill Rate: {vehicle.volFillRate.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
 
-                  <div className={`p-3 rounded-xl border shadow-sm ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold">Loaded Weight</span>
-                    <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
-                      {activeVehicle.totalWeight.toLocaleString()} <span className="text-xs font-normal text-slate-500">kg</span>
-                    </div>
-                    <span className="text-[11px] text-slate-500">
-                      {activeVehicle.weightFillRate.toFixed(1)}% of max capacity
-                    </span>
-                  </div>
-                </div>
+                      {/* 4 Metric Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                        <div className={`p-3 rounded-xl border ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                        }`}>
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold">Volume Fill Rate</span>
+                          <div className="text-xl font-black text-blue-600 dark:text-blue-400 mt-0.5">
+                            {vehicle.volFillRate.toFixed(1)}%
+                          </div>
+                          <span className="text-[11px] text-slate-500">
+                            {(vehicle.usedVolume / 1e6).toFixed(1)} / {(vehicle.totalVolume / 1e6).toFixed(1)} m³
+                          </span>
+                        </div>
 
-                {/* 3D Three.js Visualizer */}
-                <ThreeDViewer
-                  vehicle={activeVehicle}
-                  colorMap={colorMap}
-                  theme={theme}
-                  onSnapshotTaken={(dataUrl) => {
-                    setCapturedScreenshots(prev => ({
-                      ...prev,
-                      [activeVehicle.vehicleId]: dataUrl,
-                    }));
-                  }}
-                />
+                        <div className={`p-3 rounded-xl border ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                        }`}>
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold">Used Length</span>
+                          <div className={`text-xl font-black mt-0.5 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                            {vehicle.usedLength.toFixed(1)} <span className="text-xs font-normal text-slate-500">cm</span>
+                          </div>
+                          <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">Solid Blue Line</span>
+                        </div>
 
-                {/* Cargo legend breakdown for active vehicle */}
-                <div className={`rounded-xl p-3.5 flex flex-wrap items-center gap-3 text-xs border shadow-sm ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                }`}>
-                  <span className="text-slate-500 font-medium">Active Vehicle Legend:</span>
-                  {Array.from(new Set(activeVehicle.items.map(i => i.originalRef))).map(ref => {
-                    const count = activeVehicle.items.filter(i => i.originalRef === ref).length;
-                    const color = colorMap[ref] || '#3b82f6';
-                    return (
-                      <div key={ref} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${
+                        <div className={`p-3 rounded-xl border ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                        }`}>
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold">Remaining Space</span>
+                          <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            {vehicle.remainingLength.toFixed(1)} <span className="text-xs font-normal text-slate-500">cm</span>
+                          </div>
+                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Dashed Green Line</span>
+                        </div>
+
+                        <div className={`p-3 rounded-xl border ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                        }`}>
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold">Loaded Weight</span>
+                          <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+                            {vehicle.totalWeight.toLocaleString()} <span className="text-xs font-normal text-slate-500">kg</span>
+                          </div>
+                          <span className="text-[11px] text-slate-500">
+                            {vehicle.weightFillRate.toFixed(1)}% of max capacity
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3D Visualizer Canvas for this vehicle */}
+                      <ThreeDViewer
+                        vehicle={vehicle}
+                        colorMap={colorMap}
+                        theme={theme}
+                        onSnapshotTaken={(dataUrl) => {
+                          setCapturedScreenshots(prev => ({
+                            ...prev,
+                            [vehicle.vehicleId]: dataUrl,
+                          }));
+                        }}
+                      />
+
+                      {/* Cargo Legend Breakdown */}
+                      <div className={`p-3 rounded-xl flex flex-wrap items-center gap-2.5 text-xs border ${
                         isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
                       }`}>
-                        <span className="w-3 h-3 rounded-sm inline-block shadow-sm" style={{ backgroundColor: color }} />
-                        <span className={`font-medium ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{ref}</span>
-                        <span className="text-slate-500">({count} units)</span>
+                        <span className="text-slate-500 font-medium">Cargo on #{actualIndex + 1}:</span>
+                        {Array.from(new Set(vehicle.items.map(i => i.originalRef))).map(ref => {
+                          const count = vehicle.items.filter(i => i.originalRef === ref).length;
+                          const color = colorMap[ref] || '#3b82f6';
+                          return (
+                            <div key={ref} className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md border ${
+                              isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                            }`}>
+                              <span className="w-2.5 h-2.5 rounded-sm inline-block shadow-sm" style={{ backgroundColor: color }} />
+                              <span className={`font-medium ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{ref}</span>
+                              <span className="text-slate-500">({count})</span>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className={`rounded-xl p-12 text-center border ${
