@@ -1,7 +1,7 @@
 """
-3D Multi-Vehicle Cargo Optimization System
+3D Multi-Vehicle Cargo Optimizer
 Streamlit + Firebase Firestore + Plotly + FPDF2 + py3dbp Heuristics
-Full 16:9 Widescreen Layout | Priority Loading Order | Light & Dark Themes | 100% English
+Full 16:9 Widescreen Layout | Multi-Truck Simultaneous 3D Visualizer | Real Light & Dark Themes | 100% English
 """
 
 import streamlit as st
@@ -24,111 +24,174 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- THEME MANAGEMENT & WIDESCREEN 16:9 CSS ---
+# --- THEME MANAGEMENT ---
 if 'theme_mode' not in st.session_state:
     st.session_state.theme_mode = "Dark"
 
-# Full width 16:9 styling
-widescreen_css = """
-<style>
-/* Remove maximum width bounds to utilize the entire screen */
-.main .block-container {
-    max-width: 98% !important;
-    padding-top: 1.5rem !important;
-    padding-bottom: 2rem !important;
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
-}
+is_light = (st.session_state.theme_mode == "Light")
 
-/* Ensure data tables stretch comfortably without horizontal overflow */
-div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {
-    width: 100% !important;
-}
-div[data-testid="stDataFrame"] > div, div[data-testid="stDataEditor"] > div {
-    width: 100% !important;
-}
-
-/* Custom scrollbars */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: #475569;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
-}
-</style>
-"""
-st.markdown(widescreen_css, unsafe_allow_html=True)
-
-# Theme CSS
-if st.session_state.theme_mode == "Light":
-    light_css = """
+# --- COMPREHENSIVE 16:9 & LIGHT/DARK CSS INJECTION ---
+if is_light:
+    theme_css = """
     <style>
-    .stApp {
+    /* Full width 16:9 layout */
+    .main .block-container {
+        max-width: 98% !important;
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+    
+    /* Light Theme Base */
+    .stApp, [data-testid="stAppViewContainer"], .main {
         background-color: #f8fafc !important;
         color: #0f172a !important;
     }
+    
     header[data-testid="stHeader"] {
         background-color: #ffffff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
     }
-    div[data-testid="stSidebar"] {
-        background-color: #f1f5f9 !important;
-        border-right: 1px solid #cbd5e1 !important;
+    
+    /* Typography in Light Mode */
+    h1, h2, h3, h4, p, span, label, div[data-testid="stMarkdownContainer"] p {
+        color: #0f172a !important;
+    }
+    .stCaption, small, .text-muted {
+        color: #64748b !important;
+    }
+    
+    /* Metrics Cards */
+    div[data-testid="stMetric"] {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 0.75rem !important;
+        padding: 0.75rem 1rem !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
     }
     div[data-testid="stMetricValue"] {
         color: #1e40af !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #475569 !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Expanders & Forms */
+    div[data-testid="stExpander"] {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 0.75rem !important;
+    }
+    
+    /* Data Editor Full Width */
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {
+        width: 100% !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 0.5rem !important;
     }
     </style>
     """
-    st.markdown(light_css, unsafe_allow_html=True)
+else:
+    theme_css = """
+    <style>
+    /* Full width 16:9 layout */
+    .main .block-container {
+        max-width: 98% !important;
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+    
+    /* Dark Theme Base */
+    .stApp, [data-testid="stAppViewContainer"], .main {
+        background-color: #090d16 !important;
+        color: #f1f5f9 !important;
+    }
+    
+    header[data-testid="stHeader"] {
+        background-color: #0f172a !important;
+        border-bottom: 1px solid #1e293b !important;
+    }
+    
+    /* Typography in Dark Mode */
+    h1, h2, h3, h4, p, span, label, div[data-testid="stMarkdownContainer"] p {
+        color: #f1f5f9 !important;
+    }
+    .stCaption, small, .text-muted {
+        color: #94a3b8 !important;
+    }
+    
+    /* Metrics Cards */
+    div[data-testid="stMetric"] {
+        background-color: #0f172a !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 0.75rem !important;
+        padding: 0.75rem 1rem !important;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3) !important;
+    }
+    div[data-testid="stMetricValue"] {
+        color: #60a5fa !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #94a3b8 !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Expanders & Forms */
+    div[data-testid="stExpander"] {
+        background-color: #0f172a !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 0.75rem !important;
+    }
+    
+    /* Data Editor Full Width */
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {
+        width: 100% !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 0.5rem !important;
+    }
+    </style>
+    """
 
-# --- DEFAULT FIREBASE SERVICE ACCOUNT CREDENTIALS ---
-DEFAULT_FIREBASE_CREDENTIALS = {
-  "type": "service_account",
-  "project_id": "optimiseur-3d-app",
-  "private_key_id": "85d47572025175e87a6f4c572e88ed53e7e5ff6c",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5tQIFRaRlMk+g\nWcR0m7UJcEAXEORYm+KwUskixA4CzBuJ8smOaroQNn0X1WIc3wQJ/DqdWikwRfKI\nmAKtGjyC81iTTedjtRJX5M3XJVBzKLNDHhmel4MiWeOWlBNJBHDyyfP0sLnIN2vA\nXOW/3RMm9rdTfZSJN+ARAUq8ShEv5WKxVC6Wchel5ZuyXIx8D7CPFt6uACE3bAYD\nZCSQfxsH8PtSbaF/y7aKyltFPU5sA32Zdd8FzuoXy//2yrojs61v2wG9gX70ulXU\nP12B/HqeSHpGIVpAHg/x+j2fpuixBScwb2WE0xtATM8aDWDrxD7nK8Wsx5cSALvf\np3t0M4AFAgMBAAECggEAAhRZHIcOo7vJy8AC6iEGyKLpc3py3JVCgfABKE154iH4\nBt06ULqxfxKzyw/VqPKaeHJ8r9+p5CGvfm7nxW7XTh/AEtvARRaVV05XZkkY0fDa\n+3hWLWIWj0ybb6sipO0kjhWoHt9Y9asSwmUmIZKDMs6GRixQSwOeWtbWR+5PnZG/\n5gHHkD1hH3FsV6fJKQv8oyEuS6QdONGp2oJdEQxI4vfEWFiVhbOcH10BcGQ7mrQH\nu8GDJcu6VDSm/5svq/k6OnKQZHstrCFJaR5D2lleAtm7/FJTZA1PPNcnyDgZ/p9B\nia0fQRmYpm5DItnUn7EpGjUlF9k7FJCkB1nS34dCSQKBgQDvd1pRDlvijMi2IhUg\nV6KyVfcppVrNbYOixQ122p8Fuyt9oGz0b/YKWrDfBcqx5rh5FkK/ur0opv5D1RAv\nxaX3Dtpwxp1XgpflZc/XAsfTvOZgZHvvMWQA4l419VYS6WypkGrseY7NxH11kUml\nyXY26Dd+iAU9I2rZt1B+9K77/QKBgQDGh3GPii4rlhkHGjDU3MFx63k657FNsB08\nH3VXH1g7n3hu/rRMBgLooj3kS89xaa2WRDnVESWxYOE8yuPtKMi3kWEYfghA/1KE\nNnaNDlPflAAf45x30rlqR1rGBUSUhtjOOw9NKHdoXSvz/feNXrW/RSFPGfLMCPs/\nMbQO352eqQKBgEhjOO8Vuxrx2d6M0PwU4b6tE+kH7jn5J/i1Pou2LKoL2WrBaw49\nJhAdOChC1PIQP6WC4CybI4E9cdFJf/og8jmLyOacc4W3mXkj3L8vPP65tJ5g4cH9\nmTBXPYlsH1faLhnX6SqQ2GVFR3OZtryh+NVCPzxFm+fOZAdqTbADAT51AoGAOtcp\n8UEjLgfuowxALNbA/uKrq6nAAyaPg6JPROMlY4aAS2VySpX9hrWPYnqVoSeRK1hN\nS7kpUslD+KCprUDJPJ76CChSifEio80Alg4JDdrvroPnfBwYmEdNwCMPkHXnDDi0\n8EluGqCCxm4fUOchNu9mT+uA6rg+vxwcIcxlCwECgYEAhef8H/wnoXiUCEqdkQ9G\nwEBTYUmQ6dh211u691yeKhx6T3I5b0m8Lfx9xuKSydC0nIn6HTgKRX/0pRUoe2t+\n08Zll4avszmpFTWLzpih/BHJqqqA5pnF07Cb0qcgeJq0VgIcglGUJpMQ9UnFy4yG\nuCzHQkqoW6v2u9BhN/Z5Juw=\n-----END PRIVATE KEY-----\n",
-  "client_email": "firebase-adminsdk-fbsvc@optimiseur-3d-app.iam.gserviceaccount.com",
-  "client_id": "115601808294897805393",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40optimiseur-3d-app.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
+st.markdown(theme_css, unsafe_allow_html=True)
 
-# --- FIREBASE CONNECTION ---
+# --- FIREBASE FIRESTORE CONNECTION ---
 FIREBASE_ENABLED = False
 db = None
 
 try:
     if not firebase_admin._apps:
         key_dict = None
+        # 1. Check Streamlit Secrets (Standard on Streamlit Cloud)
         if "firebase_credentials" in st.secrets:
             raw_sec = st.secrets["firebase_credentials"]
             key_dict = json.loads(raw_sec) if isinstance(raw_sec, str) else raw_sec
+        # 2. Check Environment Variable
         elif "FIREBASE_CREDENTIALS" in os.environ:
             key_dict = json.loads(os.environ["FIREBASE_CREDENTIALS"])
-        else:
-            key_dict = DEFAULT_FIREBASE_CREDENTIALS
+        # 3. Check local serviceAccountKey.json file if present locally
+        elif os.path.exists("serviceAccountKey.json"):
+            with open("serviceAccountKey.json") as f:
+                key_dict = json.load(f)
 
-        cred = credentials.Certificate(key_dict)
-        firebase_admin.initialize_app(cred)
-    
-    db = firestore.client()
-    FIREBASE_ENABLED = True
+        if key_dict:
+            cred = credentials.Certificate(key_dict)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            FIREBASE_ENABLED = True
+        else:
+            FIREBASE_ENABLED = False
+    else:
+        db = firestore.client()
+        FIREBASE_ENABLED = True
 except Exception as e:
-    st.warning(f"⚠️ Firebase Firestore running in offline mode. Session data will remain local. (Detail: {e})")
     FIREBASE_ENABLED = False
 
-# --- DATABASE FUNCTIONS ---
 def load_library():
     """Load all products from the Firestore 'products' collection."""
     if not FIREBASE_ENABLED or db is None:
@@ -136,8 +199,7 @@ def load_library():
     try:
         docs = db.collection('products').stream()
         return {doc.id: doc.to_dict() for doc in docs}
-    except Exception as e:
-        st.warning(f"Firestore library load issue: {e}")
+    except Exception:
         return {}
 
 def save_library(library_data):
@@ -205,25 +267,19 @@ if 'optimization_done' not in st.session_state:
 if 'current_mix_name' not in st.session_state:
     st.session_state.current_mix_name = "Standard Logistics Project"
 
-# --- RULES STATE INITIALIZATION ---
+# --- RULES STATE ---
 if 'rear_buffer_cm' not in st.session_state:
     st.session_state.rear_buffer_cm = 25.0
-
 if 'enable_80cm_rule' not in st.session_state:
     st.session_state.enable_80cm_rule = True
-
 if 'bonus_weight' not in st.session_state:
     st.session_state.bonus_weight = 50000.0
-
 if 'enable_euro_grid' not in st.session_state:
     st.session_state.enable_euro_grid = True
-
 if 'enable_gravity_slide' not in st.session_state:
     st.session_state.enable_gravity_slide = True
-
 if 'enable_strict_collision' not in st.session_state:
     st.session_state.enable_strict_collision = True
-
 if 'enable_overhead_protection' not in st.session_state:
     st.session_state.enable_overhead_protection = True
 
@@ -238,8 +294,6 @@ if 'config' in st.query_params and not st.session_state.get('loaded_from_url'):
         st.session_state.loaded_from_url = True
         st.session_state.current_mix_name = config_name
         st.toast(f"✅ Configuration '{config_name}' loaded from shared link!")
-    else:
-        st.warning(f"Shared configuration '{config_name}' not found in database.")
 
 # --- CONTAINERS DATA ---
 CONTAINERS = {
@@ -269,13 +323,6 @@ class CustomItem(Item):
         return super().get_dimension()
 
 def custom_pack_item_to_bin(bin_obj, item, rules):
-    """
-    Extreme Point Best Fit Algorithm with dynamic logistics heuristics:
-    - Surface contact scoring
-    - 80cm width alignment rule bonus
-    - Rear door clearance penalty
-    - Overhead protection for non-stackable cargo
-    """
     pivots = set([(Decimal('0'), Decimal('0'), Decimal('0'))])
     for p in bin_obj.items:
         w, h, d = p.get_dimension()
@@ -288,7 +335,6 @@ def custom_pack_item_to_bin(bin_obj, item, rules):
                 pivots.update([(px+w, qy, pz), (px, qy+qh, pz), (qx, py+h, pz), (qx+qw, py+h, pz)])
 
     valid_pivots = [p for p in pivots if p[0] < bin_obj.width and p[1] < bin_obj.height and p[2] < bin_obj.depth]
-    # Primary sorting: Z (bottom first), X (front to back), Y (left to right)
     sorted_pivots = sorted(valid_pivots, key=lambda p: (p[2], p[0], p[1]))
 
     best_score, best_pivot, best_rot = -float('inf'), None, None
@@ -308,14 +354,12 @@ def custom_pack_item_to_bin(bin_obj, item, rules):
                 pw, ph, pd = p_item.get_dimension()
                 px, py, pz = p_item.position
                 
-                # Strict 3D Non-Overlap check
                 if not (pivot[0] >= px+pw or pivot[0]+w <= px or 
                         pivot[1] >= py+ph or pivot[1]+h <= py or 
                         pivot[2] >= pz+pd or pivot[2]+d <= pz):
                     collision = True
                     break
                 
-                # Overhead protection for non-stackable items
                 if rules.get('enable_overhead_protection', True):
                     if getattr(p_item, 'stackable', True) is False and pivot[2] >= pz+pd:
                         if not (pivot[0] >= px+pw or pivot[0]+w <= px or pivot[1] >= py+ph or pivot[1]+h <= py):
@@ -324,8 +368,6 @@ def custom_pack_item_to_bin(bin_obj, item, rules):
                             
             if not collision:
                 score = 0.0
-                
-                # Contact surface with bin boundaries
                 if pivot[0] == 0: score += float(h * d)
                 if pivot[1] == 0: score += float(w * d)
                 if pivot[2] == 0: score += float(w * h)
@@ -333,7 +375,6 @@ def custom_pack_item_to_bin(bin_obj, item, rules):
                 if pivot[1] + h == bin_obj.height: score += float(w * d)
                 if pivot[2] + d == bin_obj.depth: score += float(w * h)
                 
-                # Contact surface with neighboring cargo
                 for p_item in bin_obj.items:
                     pw, ph, pd = p_item.get_dimension()
                     px, py, pz = p_item.position
@@ -350,16 +391,13 @@ def custom_pack_item_to_bin(bin_obj, item, rules):
                         oy = min(pivot[1]+h, py+ph) - max(pivot[1], py)
                         if ox > 0 and oy > 0: score += float(ox * oy) * 2.0
 
-                # Compactness: penalize distance from origin
                 score -= (float(pivot[0]) * 0.2 + float(pivot[1]) * 0.1 + float(pivot[2]) * 0.1)
                 
-                # RULE: 80cm Width Alignment Rule (rows of 3 across 240cm width)
                 if rules.get('enable_80cm_rule', True):
                     bonus_val = float(rules.get('bonus_weight', 50000.0))
                     if abs(float(h) - 80.0) <= 2.0 and float(bin_obj.height) >= 240.0:
                         score += bonus_val 
 
-                # RULE: Rear Door Proximity Penalty
                 rear_buffer = float(rules.get('rear_buffer_cm', 25.0))
                 if rear_buffer > 0.0:
                     danger_zone = float(bin_obj.width) - rear_buffer
@@ -377,7 +415,6 @@ def custom_pack_item_to_bin(bin_obj, item, rules):
     return False
 
 def get_optimal_europallet_slots(container_name):
-    """Pinwheel and 3-wide slots for standard Europallets (120x80cm)."""
     slots = []
     if "20FT" in container_name:
         for i in range(7):
@@ -390,14 +427,12 @@ def get_optimal_europallet_slots(container_name):
         for i in range(10):
             slots.append({'x': i * 120, 'y': 120, 'w': 120, 'h': 80, 'filled': False})
     elif "TIR" in container_name:
-        # Standard 33 europallet layout: 11 rows of 3 pallets (width = 3 * 80 = 240cm <= 245cm)
         for i in range(11):
             for j in range(3):
                 slots.append({'x': i * 120, 'y': j * 80, 'w': 120, 'h': 80, 'filled': False})
     return slots
 
 def pack_with_rules(bin_obj, item, euro_slots, rules):
-    """Pack item using configured heuristics and optional pinwheel / gravity slide."""
     l, w = float(item.width), float(item.height)
     is_europallet = (abs(l - 120) <= 2 and abs(w - 80) <= 2) or (abs(l - 80) <= 2 and abs(w - 120) <= 2)
     
@@ -434,7 +469,6 @@ def pack_with_rules(bin_obj, item, euro_slots, rules):
                                         break
                         
                         if not collision:
-                            # GRAVITY SLIDE (X-axis forward compaction)
                             if rules.get('enable_gravity_slide', True):
                                 min_x = Decimal('0')
                                 for p_item in bin_obj.items:
@@ -455,24 +489,17 @@ def pack_with_rules(bin_obj, item, euro_slots, rules):
 
     return custom_pack_item_to_bin(bin_obj, item, rules)
 
-# --- 3D VISUALIZATION ENGINE ---
+# --- 3D VISUALIZATION ENGINE (Plotly) ---
 def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_theme=False):
-    """
-    Renders 3D Plotly visualizer:
-    - 3D box meshes with solid black edge wireframes
-    - Container bounding box outline
-    - Floating measurement lines: Solid Blue Line (Used Length), Dashed Green Line (Remaining Space)
-    - Interactive Trace Group Legend
-    """
     fig = go.Figure()
     cx, cy, cz = container_dim
 
-    # 1. Container Wireframe Outline
+    # Container Outline Frame
     x_lines = [0, cx, cx, 0, 0, None, 0, cx, cx, 0, 0, None, 0, 0, None, cx, cx, None, cx, cx, None, 0, 0]
     y_lines = [0, 0, cy, cy, 0, None, 0, 0, cy, cy, 0, None, 0, 0, None, 0, 0, None, cy, cy, None, cy, cy]
     z_lines = [0, 0, 0, 0, 0, None, cz, cz, cz, cz, cz, None, 0, cz, None, 0, cz, None, 0, cz, None, 0, cz]
     
-    frame_color = '#64748b' if is_light_theme else '#94a3b8'
+    frame_color = '#475569' if is_light_theme else '#94a3b8'
     fig.add_trace(go.Scatter3d(
         x=x_lines, y=y_lines, z=z_lines,
         mode='lines',
@@ -490,7 +517,6 @@ def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_them
 
     legend_added = set()
 
-    # 2. Render each box mesh
     for item in fitted_items:
         ref_name = item.name.split(" #")[0]
         color = color_map.get(ref_name, '#333333')
@@ -526,12 +552,10 @@ def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_them
             legendgroup=ref_name
         ))
 
-        # Edge lines of the box
         all_x_edges.extend([x, x+w, x+w, x, x, None, x, x+w, x+w, x, x, None, x, x, None, x+w, x+w, None, x+w, x+w, None, x, x, None])
         all_y_edges.extend([y, y, y+h, y+h, y, None, y, y, y+h, y+h, y, None, y, y, None, y, y, None, y+h, y+h, None, y+h, y+h, None])
         all_z_edges.extend([z, z, z, z, z, None, z+d, z+d, z+d, z+d, z+d, None, z, z+d, None, z, z+d, None, z, z+d, None, z, z+d, None])
 
-    # 3. Add solid black wireframes
     if all_x_edges:
         fig.add_trace(go.Scatter3d(
             x=all_x_edges, y=all_y_edges, z=all_z_edges,
@@ -541,10 +565,9 @@ def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_them
             showlegend=False
         ))
 
-    # 4. Floating Measurement Lines above trailer ceiling
+    # Floating Measurement Lines
     if max_x_occupied > 0:
         z_float = cz * 1.06
-        # Solid Blue Line: Used Length
         fig.add_trace(go.Scatter3d(
             x=[0, max_x_occupied], y=[0, 0], z=[z_float, z_float],
             mode='lines',
@@ -562,7 +585,6 @@ def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_them
             showlegend=False
         ))
         
-        # Dashed Green Line: Remaining Space
         if remaining_x > 0:
             fig.add_trace(go.Scatter3d(
                 x=[max_x_occupied, cx], y=[0, 0], z=[z_float, z_float],
@@ -581,11 +603,12 @@ def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_them
                 showlegend=False
             ))
 
-    bg_color = "#f8fafc" if is_light_theme else "#0f172a"
-    grid_color = "#e2e8f0" if is_light_theme else "#1e293b"
+    bg_color = "#ffffff" if is_light_theme else "#0f172a"
+    grid_color = "#f1f5f9" if is_light_theme else "#1e293b"
+    font_color = "#0f172a" if is_light_theme else "#f8fafc"
 
     fig.update_layout(
-        title=dict(text=title, font=dict(size=18, family="Arial")),
+        title=dict(text=title, font=dict(size=18, family="Arial", color=font_color)),
         template="plotly_white" if is_light_theme else "plotly_dark",
         paper_bgcolor=bg_color,
         plot_bgcolor=bg_color,
@@ -601,17 +624,18 @@ def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_them
         ), 
         margin=dict(l=0, r=0, b=0, t=40), 
         legend=dict(
-            title=dict(text="<b>Cargo References</b>"),
+            title=dict(text="<b>Cargo References</b>", font=dict(color=font_color)),
+            font=dict(color=font_color),
             yanchor="top", y=0.98,
             xanchor="left", x=1.02,
-            bgcolor="rgba(255,255,255,0.9)" if is_light_theme else "rgba(15,23,42,0.9)",
-            bordercolor="#94a3b8",
+            bgcolor="rgba(255,255,255,0.95)" if is_light_theme else "rgba(15,23,42,0.95)",
+            bordercolor="#cbd5e1" if is_light_theme else "#334155",
             borderwidth=1
         )
     )
     return fig
 
-# --- LANDSCAPE PDF REPORT GENERATOR (`fpdf2`) ---
+# --- LANDSCAPE PDF REPORT GENERATOR ---
 def generate_pdf_report(cargo_items, used_bins, container_props, project_name="Untitled Project", uploaded_images=None):
     try:
         from fpdf import FPDF
@@ -619,19 +643,15 @@ def generate_pdf_report(cargo_items, used_bins, container_props, project_name="U
         st.error("⚠️ The PDF Export feature requires 'fpdf2'. Please install it: pip install fpdf2")
         return None
     
-    # Orientation 'L' (Landscape) for full width readability
     pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # --- PAGE 1: TITLE & STRUCTURED DATA TABLE ---
     pdf.add_page()
     pdf.set_font("Helvetica", style='B', size=18)
-    
     safe_title = f"3D Cargo Optimization Report - {project_name}".encode('latin-1', 'replace').decode('latin-1')
     pdf.cell(277, 12, txt=safe_title, ln=True, align='C')
     pdf.ln(2)
 
-    # Sub-header with metadata
     pdf.set_font("Helvetica", size=10)
     total_packages = sum(int(item.get('Quantity', 0)) for item in cargo_items)
     total_weight = sum(int(item.get('Quantity', 0)) * float(item.get('Weight', 0)) for item in cargo_items)
@@ -642,9 +662,8 @@ def generate_pdf_report(cargo_items, used_bins, container_props, project_name="U
     pdf.cell(277, 8, txt="Cargo Manifest Table:", ln=True)
     pdf.ln(1)
     
-    # Table Header (Total = 268mm within 277mm available width)
     pdf.set_font("Helvetica", style='B', size=9)
-    pdf.set_fill_color(230, 230, 230) # Light gray #E6E6E6
+    pdf.set_fill_color(230, 230, 230)
     pdf.set_text_color(20, 20, 20)
     
     headers = [
@@ -657,7 +676,6 @@ def generate_pdf_report(cargo_items, used_bins, container_props, project_name="U
         pdf.cell(w, 8, txt=head, border=1, fill=True, align='C')
     pdf.ln()
 
-    # Table Body Rows
     pdf.set_font("Helvetica", size=8)
     sorted_items = sorted(cargo_items, key=lambda x: int(x.get("Priority", 999)))
     
@@ -674,7 +692,7 @@ def generate_pdf_report(cargo_items, used_bins, container_props, project_name="U
         pdf.cell(20, 7, txt=f"{float(item.get('Weight', 0)):.1f}", border=1, align='C')
         
         rot = str(item.get('Rotation', ''))
-        rot = rot.replace("Auto (Horizontal)", "Auto(H)").replace("Auto (All)", "Auto(All)").replace("Strict: L -> Length", "L->Length").replace("Strict: W -> Length", "W->Length")
+        rot = rot.replace("Auto (Horizontal)", "Auto(H)").replace("Strict: L -> Length", "L->Length").replace("Strict: W -> Length", "W->Length")
         pdf.cell(40, 7, txt=rot, border=1, align='C')
         
         pdf.cell(15, 7, txt=str(item.get('Stackable', 'Yes')), border=1, align='C')
@@ -682,7 +700,6 @@ def generate_pdf_report(cargo_items, used_bins, container_props, project_name="U
         
     pdf.ln(6)
 
-    # --- SUBSEQUENT PAGES: VEHICLE LAYOUT SUMMARIES & 3D SCREENSHOTS ---
     for idx, b in enumerate(used_bins):
         pdf.add_page()
         pdf.set_font("Helvetica", style='B', size=14)
@@ -723,7 +740,7 @@ def generate_pdf_report(cargo_items, used_bins, container_props, project_name="U
         return tmp_pdf.name
 
 # =====================================================================
-# --- USER INTERFACE (STREAMLIT FULL-WIDTH 16:9 LAYOUT) ---
+# --- USER INTERFACE (STREAMLIT WIDESCREEN 16:9 LAYOUT) ---
 # =====================================================================
 
 # Top Navigation Bar & Theme Selector
@@ -747,7 +764,7 @@ with top_col3:
         ["Dark", "Light"],
         index=0 if st.session_state.theme_mode == "Dark" else 1,
         horizontal=True,
-        key="theme_selector"
+        key="theme_radio_selector"
     )
     if theme_choice != st.session_state.theme_mode:
         st.session_state.theme_mode = theme_choice
@@ -764,7 +781,7 @@ with col1:
     st.header("1. Transport Parameters")
     transport_type = st.selectbox("Trailer / Container Type", list(CONTAINERS.keys()))
     c_props = CONTAINERS[transport_type]
-    max_bins = st.number_input("Maximum number of vehicles", min_value=1, max_value=15, value=2)
+    max_bins = st.number_input("Maximum number of vehicles", min_value=1, max_value=15, value=5, key="max_bins_input")
     st.info(f"📏 Usable Dimensions: **{c_props['L']} x {c_props['W']} x {c_props['H']} cm** | ⚖️ Max Weight: **{c_props['max_weight']:,} kg**")
 
     # ---------------------------------------------------------
@@ -773,7 +790,6 @@ with col1:
     with st.expander("⚙️ Logistics Rules & Heuristics Settings", expanded=True):
         st.markdown("Tune live packing heuristics before running calculation:")
 
-        # 1. Rear Door Buffer
         st.session_state.rear_buffer_cm = st.slider(
             "🚪 Rear Door Buffer / Clearance (`rear_buffer_cm`)",
             min_value=0.0, max_value=100.0,
@@ -782,7 +798,6 @@ with col1:
             help="Penalizes cargo extending beyond (Length - rear_buffer_cm) to force compact 90° rotations near the rear doors."
         )
 
-        # 2. 80cm Width Alignment Rule
         st.session_state.enable_80cm_rule = st.toggle(
             "📐 80cm Width Alignment Rule",
             value=st.session_state.enable_80cm_rule,
@@ -796,7 +811,6 @@ with col1:
                 step=5000.0
             )
 
-        # 3. Europallet Strategy & Gravity Slide
         c_r1, c_r2 = st.columns(2)
         with c_r1:
             st.session_state.enable_euro_grid = st.toggle(
@@ -811,7 +825,6 @@ with col1:
                 help="Automatically slides pallets forward along the X-axis until physical contact."
             )
 
-        # 4. Strict Collision & Stacking Rules
         c_r3, c_r4 = st.columns(2)
         with c_r3:
             st.session_state.enable_strict_collision = st.toggle(
@@ -1033,7 +1046,6 @@ with col2:
         }
     )
     
-    # Sync edited data table back to session state
     updated_items = edited_df.to_dict('records')
     st.session_state.cargo_items = [
         item for item in updated_items 
@@ -1045,7 +1057,7 @@ with col2:
 
     st.header("4. Fleet 3D Optimization & Visualizer")
     
-    # Run Optimization Button
+    # Calculate Button
     if st.button("🚀 Calculate & Display Fleet Loading", type="primary", use_container_width=True):
         if not st.session_state.cargo_items:
             st.warning("Please add cargo items first.")
@@ -1060,7 +1072,7 @@ with col2:
             if impossible_items:
                 st.error(f"🚨 **Dimension Alert**: Height of ({', '.join(impossible_items)}) exceeds the vehicle ceiling ({c_props['H']} cm).")
             
-            with st.spinner("Executing 3D bin packing heuristics and priority loading..."):
+            with st.spinner("Executing 3D bin packing heuristics and priority loading across fleet..."):
                 active_rules = {
                     'rear_buffer_cm': st.session_state.rear_buffer_cm,
                     'enable_80cm_rule': st.session_state.enable_80cm_rule,
@@ -1071,7 +1083,7 @@ with col2:
                     'enable_overhead_protection': st.session_state.enable_overhead_protection,
                 }
 
-                # Stacking logic respecting strict loading priority
+                # Priority loading order: sort strictly by Priority (1 = first loaded / deepest)
                 sorted_cargo = sorted(st.session_state.cargo_items, key=lambda x: int(x.get("Priority", 999)))
                 all_items_to_pack = []
                 
@@ -1115,8 +1127,9 @@ with col2:
                 unpacked_items = list(all_items_to_pack)
                 used_bins = []
 
-                # Multi-vehicle packing loop
-                for i in range(int(max_bins)):
+                # Multi-vehicle packing loop: iterate up to max_bins to fit all remaining cargo
+                limit_vehicles = max(1, int(st.session_state.get('max_bins_input', max_bins)))
+                for i in range(limit_vehicles):
                     if not unpacked_items:
                         break 
                     bin_obj = Bin(
@@ -1169,16 +1182,20 @@ with col2:
                 st.session_state.unpacked_leftovers = unpacked_items
                 
                 if unpacked_items:
-                    st.warning(f"⚠️ {len(unpacked_items)} item(s) could not fit in the allocated fleet ({max_bins} vehicle(s)). Please increase the maximum number of vehicles.")
+                    st.warning(f"⚠️ {len(unpacked_items)} item(s) could not fit in the allocated fleet ({limit_vehicles} vehicle(s)). Please increase the maximum number of vehicles.")
                 else:
                     st.success(f"✅ Optimization complete! 100% of cargo packed across {len(final_used_bins)} vehicle(s).")
 
     # ---------------------------------------------------------
-    # DISPLAY PERSISTENT OPTIMIZATION RESULTS
+    # DISPLAY SIMULTANEOUS 3D RESULTS FOR ALL DEPLOYED VEHICLES
     # ---------------------------------------------------------
     if st.session_state.get('optimization_done', False):
-        is_light = (st.session_state.theme_mode == "Light")
+        active_theme_is_light = (st.session_state.theme_mode == "Light")
+        deployed_count = len(st.session_state.used_bins)
 
+        st.markdown(f"### 🚛 Fleet Optimization Results: {deployed_count} Vehicle(s) Deployed")
+
+        # Iterate over EVERY deployed vehicle and render its complete card + 3D chart
         for idx, b in enumerate(st.session_state.used_bins):
             total_vol = float(b.width * b.height * b.depth)
             used_vol = sum([float(i.width * i.height * i.depth) for i in b.items])
@@ -1189,7 +1206,7 @@ with col2:
             total_loaded_weight = sum([float(i.weight) for i in b.items])
             weight_utilization = (total_loaded_weight / float(b.max_weight)) * 100.0 if float(b.max_weight) > 0 else 0.0
             
-            st.markdown(f"### 🚛 {b.name}")
+            st.markdown(f"#### 🚚 Vehicle #{idx+1} — {b.name} ({len(b.items)} cargo units)")
             
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("Volume Fill Rate", f"{fill_rate:.1f}%")
@@ -1197,23 +1214,28 @@ with col2:
             m3.metric("Remaining Space", f"{rem_x:.1f} cm")
             m4.metric("Loaded Weight", f"{total_loaded_weight:,.0f} kg", f"{weight_utilization:.1f}% of max")
 
-            st.plotly_chart(
-                plot_3d_packing(
-                    (c_props["L"], c_props["W"], c_props["H"]),
-                    b.items,
-                    st.session_state.color_map,
-                    f"3D Interactive View - {b.name}",
-                    is_light_theme=is_light
-                ),
-                use_container_width=True
+            # Plotly 3D visualizer with theme=None so Light/Dark template works 100% without Streamlit overrides
+            fig = plot_3d_packing(
+                (c_props["L"], c_props["W"], c_props["H"]),
+                b.items,
+                st.session_state.color_map,
+                f"3D Packing View — Vehicle #{idx+1} ({b.name})",
+                is_light_theme=active_theme_is_light
             )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                theme=None,
+                key=f"plotly_vehicle_chart_{idx}_{st.session_state.theme_mode}"
+            )
+            st.markdown("---")
 
         # -----------------------------------------------------
         # LANDSCAPE PDF EXPORT SECTION
         # -----------------------------------------------------
-        st.markdown("---")
         st.subheader("📄 Export Landscape PDF Report (`fpdf2`)")
-        st.info("💡 **3D Screenshot Integration:** Hover over the 3D charts above, click the 📷 (camera) icon to download PNG captures, then drag and drop them below to embed them into your PDF report!")
+        st.info("💡 **3D Screenshot Integration:** Hover over any 3D chart above, click the 📷 (camera) icon to download a PNG screenshot, then drag and drop below to embed it directly into your report!")
         
         pdf_project_name = st.text_input("Project Name for PDF:", value=st.session_state.get('current_mix_name', 'Logistics Project'))
         uploaded_imgs = st.file_uploader(
