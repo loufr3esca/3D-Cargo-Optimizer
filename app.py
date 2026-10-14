@@ -28,7 +28,7 @@ st.set_page_config(
 if 'theme_mode' not in st.session_state:
     st.session_state.theme_mode = "Light"
 
-is_light = (st.session_state.theme_mode == "Light")
+is_light = (st.session_state.get('theme_mode', 'Light') == "Light")
 
 # --- COMPREHENSIVE 16:9 & LIGHT/DARK CSS INJECTION ---
 if is_light:
@@ -197,7 +197,7 @@ def load_library():
     if not FIREBASE_ENABLED or db is None:
         return {}
     try:
-        docs = db.collection('products').stream()
+        docs = db.collection('products').stream(timeout=5)
         return {doc.id: doc.to_dict() for doc in docs}
     except Exception:
         return {}
@@ -217,7 +217,7 @@ def load_configs():
     if not FIREBASE_ENABLED or db is None:
         return {}
     try:
-        docs = db.collection('configs').stream()
+        docs = db.collection('configs').stream(timeout=5)
         return {doc.id: doc.to_dict() for doc in docs}
     except Exception:
         return {}
@@ -784,16 +784,12 @@ with top_col2:
 
 with top_col3:
     st.write("")
-    theme_choice = st.radio(
+    st.radio(
         "UI Theme",
         ["Light", "Dark"],
-        index=0 if st.session_state.theme_mode == "Light" else 1,
-        horizontal=True,
-        key="theme_radio_selector"
+        key="theme_mode",
+        horizontal=True
     )
-    if theme_choice != st.session_state.theme_mode:
-        st.session_state.theme_mode = theme_choice
-        st.rerun()
 
 st.markdown("---")
 
@@ -885,7 +881,7 @@ with col1:
     d_w, d_weight = 80.0, 450.0
     
     if selected_preset != "-- New product --":
-        prod = st.session_state.product_lib[selected_preset]
+        prod = st.session_state.product_lib.get(selected_preset, {})
         d_ref = prod.get("Ref", selected_preset)
         d_l = float(prod.get("L", 120.0))
         d_w = float(prod.get("W", prod.get("l", 80.0)))
@@ -958,11 +954,15 @@ with col1:
         if save_name and st.session_state.cargo_items:
             save_config(save_name, st.session_state.cargo_items)
             st.session_state.current_mix_name = save_name
+            if 'saved_configs' in st.session_state:
+                st.session_state.saved_configs[save_name] = {"items": st.session_state.cargo_items}
             st.success(f"Mix '{save_name}' saved successfully!")
         else:
             st.error("Enter a name and add cargo items first.")
             
-    configs = load_configs()
+    if 'saved_configs' not in st.session_state:
+        st.session_state.saved_configs = load_configs()
+    configs = st.session_state.saved_configs
     if configs:
         selected_mix = st.selectbox("📂 Load or Share Saved Mix", ["-- Select a mix --"] + list(configs.keys()))
         c_l, c_sh = st.columns(2)
@@ -1061,7 +1061,6 @@ with col2:
             st.rerun()
         display_df = pd.DataFrame(columns=["Priority", "Reference", "Quantity", "Length", "Width", "Height", "Weight", "Rotation", "Stackable", "Color"])
     else:
-        st.session_state.cargo_items = sorted(st.session_state.cargo_items, key=lambda x: int(x.get("Priority", 999)))
         display_df = pd.DataFrame(st.session_state.cargo_items)
         
     edited_df = st.data_editor(
@@ -1080,7 +1079,8 @@ with col2:
             "Rotation": st.column_config.SelectboxColumn("Rotation Policy", options=["Auto (Horizontal)", "Auto (All)", "Strict: L -> Length", "Strict: W -> Length"]),
             "Stackable": st.column_config.SelectboxColumn("Stackable", options=["Yes", "No"]),
             "Color": st.column_config.TextColumn("Color (Hex)")
-        }
+        },
+        key="cargo_manifest_data_editor"
     )
     
     updated_items = edited_df.to_dict('records')
