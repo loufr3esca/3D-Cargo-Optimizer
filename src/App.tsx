@@ -77,20 +77,16 @@ const INITIAL_CARGO_ITEMS: CargoItem[] = [
 ];
 
 export default function App() {
-  // Theme State: 'dark' | 'light'
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  // Theme State: 'dark' | 'light' (Default: 'light')
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const isLight = theme === 'light';
 
   // State
   const [transportType, setTransportType] = useState<string>('TIR (Semi-trailer)');
   const [maxVehicles, setMaxVehicles] = useState<number>(3);
   const [rules, setRules] = useState<OptimizationRules>(DEFAULT_RULES);
-  const [cargoItems, setCargoItems] = useState<CargoItem[]>(INITIAL_CARGO_ITEMS);
-  const [colorMap, setColorMap] = useState<Record<string, string>>({
-    'Euro Pallet (Standard)': '#4363d8',
-    'Half Pallet (Demi)': '#3cb44b',
-    'Heavy Industrial Crate': '#e6194b',
-  });
+  const [cargoItems, setCargoItems] = useState<CargoItem[]>([]);
+  const [colorMap, setColorMap] = useState<Record<string, string>>({});
   
   // Library State
   const [productLib, setProductLib] = useState<Record<string, any>>({
@@ -122,6 +118,12 @@ export default function App() {
   const currentContainer = CONTAINERS[transportType] || CONTAINERS['TIR (Semi-trailer)'];
 
   const handleCalculate = () => {
+    if (cargoItems.length === 0) {
+      setVehicles([]);
+      setUnplacedCount(0);
+      setIsCalculated(false);
+      return;
+    }
     const sortedCargo = [...cargoItems].sort((a, b) => a.Priority - b.Priority);
     const result = runCargoOptimization(sortedCargo, transportType, maxVehicles, rules);
     setVehicles(result.vehicles);
@@ -138,9 +140,22 @@ export default function App() {
     }
   };
 
+  const handleLoadSampleCargo = () => {
+    setCargoItems(INITIAL_CARGO_ITEMS);
+    setColorMap({
+      'Euro Pallet (Standard)': '#4363d8',
+      'Half Pallet (Demi)': '#3cb44b',
+      'Heavy Industrial Crate': '#e6194b',
+    });
+    setNotification('Sample multi-truck cargo (36 Euro Pallets & Demi) loaded!');
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   useEffect(() => {
-    handleCalculate();
-  }, []);
+    if (cargoItems.length > 0) {
+      handleCalculate();
+    }
+  }, [cargoItems, transportType, maxVehicles]);
 
   const handleColorChange = (ref: string, color: string) => {
     setColorMap(prev => ({
@@ -476,6 +491,7 @@ export default function App() {
               setTimeout(() => setNotification(null), 3000);
             }}
             onUpdateLibrary={setProductLib}
+            onLoadSample={handleLoadSampleCargo}
           />
 
           {/* 2. 3D OPTIMIZATION RESULTS - MULTI-TRUCK SIMULTANEOUS DISPLAY */}

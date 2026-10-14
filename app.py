@@ -26,7 +26,7 @@ st.set_page_config(
 
 # --- THEME MANAGEMENT ---
 if 'theme_mode' not in st.session_state:
-    st.session_state.theme_mode = "Dark"
+    st.session_state.theme_mode = "Light"
 
 is_light = (st.session_state.theme_mode == "Light")
 
@@ -245,18 +245,10 @@ if 'product_lib' not in st.session_state:
     st.session_state.product_lib = loaded if loaded else DEFAULT_LIBRARY_SEED
 
 if 'cargo_items' not in st.session_state:
-    st.session_state.cargo_items = [
-        {"Priority": 1, "Reference": "Euro Pallet (Standard)", "Quantity": 24, "Length": 120.0, "Width": 80.0, "Height": 140.0, "Weight": 450.0, "Rotation": "Auto (Horizontal)", "Stackable": "Yes", "Color": "#4363d8"},
-        {"Priority": 2, "Reference": "Half Pallet (Demi)", "Quantity": 12, "Length": 80.0, "Width": 60.0, "Height": 110.0, "Weight": 220.0, "Rotation": "Auto (Horizontal)", "Stackable": "Yes", "Color": "#3cb44b"},
-        {"Priority": 3, "Reference": "Heavy Industrial Crate", "Quantity": 4, "Length": 100.0, "Width": 100.0, "Height": 90.0, "Weight": 700.0, "Rotation": "Strict: L -> Length", "Stackable": "No", "Color": "#e6194b"}
-    ]
+    st.session_state.cargo_items = []
 
 if 'color_map' not in st.session_state:
-    st.session_state.color_map = {
-        "Euro Pallet (Standard)": "#4363d8",
-        "Half Pallet (Demi)": "#3cb44b",
-        "Heavy Industrial Crate": "#e6194b"
-    }
+    st.session_state.color_map = {}
 
 if 'used_bins' not in st.session_state:
     st.session_state.used_bins = []
@@ -565,46 +557,61 @@ def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_them
             showlegend=False
         ))
 
-    # Floating Measurement Lines
+    # Floating Measurement Lines (elevated upward with clean clearance above the grid and container)
     if max_x_occupied > 0:
-        z_float = cz * 1.06
+        z_float = cz * 1.26
+        z_text = cz * 1.38
+        y_offset = -cy * 0.04  # Shift slightly towards the front viewer to avoid wireframe overlap
+
+        # Solid Blue Line: Used Length
         fig.add_trace(go.Scatter3d(
-            x=[0, max_x_occupied], y=[0, 0], z=[z_float, z_float],
-            mode='lines',
-            line=dict(color='#2563eb', width=5),
+            x=[0, max_x_occupied], y=[y_offset, y_offset], z=[z_float, z_float],
+            mode='lines+markers',
+            line=dict(color='#1d4ed8' if is_light_theme else '#60a5fa', width=6),
+            marker=dict(size=4, color='#1d4ed8' if is_light_theme else '#60a5fa'),
             name="Used Length",
             hoverinfo='skip'
         ))
         fig.add_trace(go.Scatter3d(
-            x=[max_x_occupied / 2.0], y=[0], z=[z_float * 1.03],
+            x=[max_x_occupied / 2.0], y=[y_offset], z=[z_text],
             mode='text',
-            text=[f"Used: {max_x_occupied:.1f} cm"],
+            text=[f"📏 Used: {max_x_occupied:.1f} cm"],
             textposition="top center",
-            textfont=dict(color='#2563eb', size=13, family='Arial Black'),
+            textfont=dict(
+                color='#1e3a8a' if is_light_theme else '#93c5fd',
+                size=14,
+                family='Arial Black, sans-serif'
+            ),
             hoverinfo='skip',
             showlegend=False
         ))
         
         if remaining_x > 0:
+            # Dashed Green Line: Remaining Space
             fig.add_trace(go.Scatter3d(
-                x=[max_x_occupied, cx], y=[0, 0], z=[z_float, z_float],
-                mode='lines',
-                line=dict(color='#16a34a', width=5, dash='dash'),
+                x=[max_x_occupied, cx], y=[y_offset, y_offset], z=[z_float, z_float],
+                mode='lines+markers',
+                line=dict(color='#15803d' if is_light_theme else '#4ade80', width=6, dash='dash'),
+                marker=dict(size=4, color='#15803d' if is_light_theme else '#4ade80'),
                 name="Remaining Space",
                 hoverinfo='skip'
             ))
             fig.add_trace(go.Scatter3d(
-                x=[max_x_occupied + remaining_x / 2.0], y=[0], z=[z_float * 1.03],
+                x=[max_x_occupied + remaining_x / 2.0], y=[y_offset], z=[z_text],
                 mode='text',
-                text=[f"Remaining: {remaining_x:.1f} cm"],
+                text=[f"🟢 Remaining: {remaining_x:.1f} cm"],
                 textposition="top center",
-                textfont=dict(color='#16a34a', size=13, family='Arial Black'),
+                textfont=dict(
+                    color='#14532d' if is_light_theme else '#86efac',
+                    size=14,
+                    family='Arial Black, sans-serif'
+                ),
                 hoverinfo='skip',
                 showlegend=False
             ))
 
-    bg_color = "#ffffff" if is_light_theme else "#0f172a"
-    grid_color = "#f1f5f9" if is_light_theme else "#1e293b"
+    bg_color = "#ffffff" if is_light_theme else "#090d16"
+    grid_color = "#e2e8f0" if is_light_theme else "#1e293b"
     font_color = "#0f172a" if is_light_theme else "#f8fafc"
 
     fig.update_layout(
@@ -613,16 +620,34 @@ def plot_3d_packing(container_dim, fitted_items, color_map, title, is_light_them
         paper_bgcolor=bg_color,
         plot_bgcolor=bg_color,
         scene=dict(
-            xaxis=dict(title='Length X (cm)', range=[0, cx * 1.05], backgroundcolor=grid_color), 
-            yaxis=dict(title='Width Y (cm)', range=[0, cy * 1.1], backgroundcolor=grid_color), 
-            zaxis=dict(title='Height Z (cm)', range=[0, cz * 1.3], backgroundcolor=grid_color), 
-            aspectmode='data', 
+            xaxis=dict(
+                title='Length X (cm)',
+                range=[0, cx * 1.06],
+                backgroundcolor="#ffffff" if is_light_theme else "#0f172a",
+                gridcolor=grid_color,
+                zerolinecolor="#cbd5e1" if is_light_theme else "#334155"
+            ),
+            yaxis=dict(
+                title='Width Y (cm)',
+                range=[-cy * 0.08, cy * 1.1],
+                backgroundcolor="#ffffff" if is_light_theme else "#0f172a",
+                gridcolor=grid_color,
+                zerolinecolor="#cbd5e1" if is_light_theme else "#334155"
+            ),
+            zaxis=dict(
+                title='Height Z (cm)',
+                range=[0, cz * 1.62],  # Generous headroom so text hovers well above the grid
+                backgroundcolor="#ffffff" if is_light_theme else "#0f172a",
+                gridcolor=grid_color,
+                zerolinecolor="#cbd5e1" if is_light_theme else "#334155"
+            ),
+            aspectmode='data',
             camera=dict(
-                eye=dict(x=1.65, y=1.65, z=1.35),
-                center=dict(x=0, y=0, z=-0.1)
+                eye=dict(x=1.75, y=1.75, z=1.45),
+                center=dict(x=0, y=0, z=-0.05)
             )
-        ), 
-        margin=dict(l=0, r=0, b=0, t=40), 
+        ),
+        margin=dict(l=0, r=0, b=0, t=40),
         legend=dict(
             title=dict(text="<b>Cargo References</b>", font=dict(color=font_color)),
             font=dict(color=font_color),
@@ -761,8 +786,8 @@ with top_col3:
     st.write("")
     theme_choice = st.radio(
         "UI Theme",
-        ["Dark", "Light"],
-        index=0 if st.session_state.theme_mode == "Dark" else 1,
+        ["Light", "Dark"],
+        index=0 if st.session_state.theme_mode == "Light" else 1,
         horizontal=True,
         key="theme_radio_selector"
     )
@@ -1021,7 +1046,19 @@ with col2:
     st.header("3. Cargo Manifest (Editable & Priority Sorted)")
     
     if not st.session_state.cargo_items:
-        st.write("The list is empty. Add cargo items from the left panel.")
+        st.info("ℹ️ The cargo manifest is currently empty. Add cargo items from the left panel, or click below to load a sample multi-truck demonstration.")
+        if st.button("✨ Load Sample Demo Cargo (36 Euro Pallets & Demi)", key="load_sample_cargo_btn"):
+            st.session_state.cargo_items = [
+                {"Priority": 1, "Reference": "Euro Pallet (Standard)", "Quantity": 36, "Length": 120.0, "Width": 80.0, "Height": 140.0, "Weight": 450.0, "Rotation": "Auto (Horizontal)", "Stackable": "Yes", "Color": "#4363d8"},
+                {"Priority": 2, "Reference": "Half Pallet (Demi)", "Quantity": 12, "Length": 80.0, "Width": 60.0, "Height": 110.0, "Weight": 220.0, "Rotation": "Auto (Horizontal)", "Stackable": "Yes", "Color": "#3cb44b"},
+                {"Priority": 3, "Reference": "Heavy Industrial Crate", "Quantity": 4, "Length": 100.0, "Width": 100.0, "Height": 90.0, "Weight": 700.0, "Rotation": "Strict: L -> Length", "Stackable": "No", "Color": "#e6194b"}
+            ]
+            st.session_state.color_map = {
+                "Euro Pallet (Standard)": "#4363d8",
+                "Half Pallet (Demi)": "#3cb44b",
+                "Heavy Industrial Crate": "#e6194b"
+            }
+            st.rerun()
         display_df = pd.DataFrame(columns=["Priority", "Reference", "Quantity", "Length", "Width", "Height", "Weight", "Rotation", "Stackable", "Color"])
     else:
         st.session_state.cargo_items = sorted(st.session_state.cargo_items, key=lambda x: int(x.get("Priority", 999)))
@@ -1195,8 +1232,7 @@ with col2:
 
         st.markdown(f"### 🚛 Fleet Optimization Results: {deployed_count} Vehicle(s) Deployed")
 
-        # Iterate over EVERY deployed vehicle and render its complete card + 3D chart
-        for idx, b in enumerate(st.session_state.used_bins):
+        def render_vehicle_card(idx, b):
             total_vol = float(b.width * b.height * b.depth)
             used_vol = sum([float(i.width * i.height * i.depth) for i in b.items])
             fill_rate = (used_vol / total_vol) * 100.0 if total_vol > 0 else 0.0
@@ -1230,6 +1266,25 @@ with col2:
                 key=f"plotly_vehicle_chart_{idx}_{st.session_state.theme_mode}"
             )
             st.markdown("---")
+
+        if deployed_count > 1:
+            v_view = st.radio(
+                "Fleet Display Layout:",
+                ["All Vehicles (Stacked)", "Tabs (One Vehicle at a Time)"],
+                horizontal=True,
+                key="st_fleet_view_layout"
+            )
+            if v_view == "Tabs (One Vehicle at a Time)":
+                tabs = st.tabs([f"🚚 Vehicle #{idx+1} ({b.name})" for idx, b in enumerate(st.session_state.used_bins)])
+                for idx, (tab, b) in enumerate(zip(tabs, st.session_state.used_bins)):
+                    with tab:
+                        render_vehicle_card(idx, b)
+            else:
+                for idx, b in enumerate(st.session_state.used_bins):
+                    render_vehicle_card(idx, b)
+        else:
+            for idx, b in enumerate(st.session_state.used_bins):
+                render_vehicle_card(idx, b)
 
         # -----------------------------------------------------
         # LANDSCAPE PDF EXPORT SECTION

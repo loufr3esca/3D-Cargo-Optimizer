@@ -11,6 +11,40 @@ interface Props {
   theme?: 'dark' | 'light';
 }
 
+function createTextSprite(text: string, color: string, bgColor: string): THREE.Sprite {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return new THREE.Sprite();
+
+  // Background rounded box
+  ctx.fillStyle = bgColor;
+  ctx.beginPath();
+  ctx.roundRect(16, 16, 480, 96, 24);
+  ctx.fill();
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.roundRect(16, 16, 480, 96, 24);
+  ctx.stroke();
+
+  // Text label
+  ctx.fillStyle = color;
+  ctx.font = 'bold 36px Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 64);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(130, 32.5, 1);
+  return sprite;
+}
+
 export const ThreeDViewer: React.FC<Props> = ({ 
   vehicle, 
   colorMap, 
@@ -171,17 +205,18 @@ export const ThreeDViewer: React.FC<Props> = ({
 
     scene.add(itemsGroup);
 
-    // Floating Measurement Lines
-    const zCeil = container.H * 1.06;
+    // Floating Measurement Lines - elevated well above ceiling and grid
+    const zCeil = container.H * 1.28;
+    const measurementZ = offsetZ - container.W * 0.05;
 
     if (usedLength > 0) {
       // Solid Blue Line: Used Length
       const usedPts = [
-        new THREE.Vector3(offsetX, zCeil, offsetZ),
-        new THREE.Vector3(offsetX + usedLength, zCeil, offsetZ),
+        new THREE.Vector3(offsetX, zCeil, measurementZ),
+        new THREE.Vector3(offsetX + usedLength, zCeil, measurementZ),
       ];
       const usedGeo = new THREE.BufferGeometry().setFromPoints(usedPts);
-      const usedMat = new THREE.LineBasicMaterial({ color: 0x2563eb, linewidth: 5 });
+      const usedMat = new THREE.LineBasicMaterial({ color: 0x2563eb, linewidth: 6 });
       const usedLine = new THREE.Line(usedGeo, usedMat);
       scene.add(usedLine);
 
@@ -198,13 +233,22 @@ export const ThreeDViewer: React.FC<Props> = ({
       );
       marker2.position.copy(usedPts[1]);
       scene.add(marker2);
+
+      // Elevated 3D Sprite Label
+      const usedSprite = createTextSprite(
+        `Used: ${usedLength.toFixed(1)} cm`,
+        isLight ? '#1d4ed8' : '#60a5fa',
+        isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.95)'
+      );
+      usedSprite.position.set(offsetX + usedLength / 2, zCeil + 30, measurementZ);
+      scene.add(usedSprite);
     }
 
     if (remainingLength > 0 && usedLength > 0) {
       // Dashed Green Line: Remaining Space
       const remPts = [
-        new THREE.Vector3(offsetX + usedLength, zCeil, offsetZ),
-        new THREE.Vector3(offsetX + container.L, zCeil, offsetZ),
+        new THREE.Vector3(offsetX + usedLength, zCeil, measurementZ),
+        new THREE.Vector3(offsetX + container.L, zCeil, measurementZ),
       ];
       const remGeo = new THREE.BufferGeometry().setFromPoints(remPts);
       const remMat = new THREE.LineDashedMaterial({
@@ -223,6 +267,15 @@ export const ThreeDViewer: React.FC<Props> = ({
       );
       marker3.position.copy(remPts[1]);
       scene.add(marker3);
+
+      // Elevated 3D Sprite Label
+      const remSprite = createTextSprite(
+        `Remaining: ${remainingLength.toFixed(1)} cm`,
+        isLight ? '#15803d' : '#4ade80',
+        isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.95)'
+      );
+      remSprite.position.set(offsetX + usedLength + remainingLength / 2, zCeil + 30, measurementZ);
+      scene.add(remSprite);
     }
 
     // Default Camera Angle

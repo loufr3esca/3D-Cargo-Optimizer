@@ -12,6 +12,7 @@ interface Props {
   productLib: Record<string, any>;
   onSaveProductToLib: (prod: any) => void;
   onUpdateLibrary: (newLib: Record<string, any>) => void;
+  onLoadSample?: () => void;
 }
 
 const PRESET_LIBRARY: Omit<CargoItem, 'id' | 'Priority' | 'Quantity'>[] = [
@@ -77,6 +78,7 @@ export const CargoTable: React.FC<Props> = ({
   productLib,
   onSaveProductToLib,
   onUpdateLibrary,
+  onLoadSample,
 }) => {
   const isLight = theme === 'light';
 
@@ -484,8 +486,19 @@ export const CargoTable: React.FC<Props> = ({
         </div>
 
         {items.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-xs">
-            The cargo list is empty. Add cargo items above to calculate optimal fleet packing.
+          <div className="p-8 text-center space-y-3">
+            <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              The cargo manifest is currently empty. Add cargo items using the form above, or click below to load a sample multi-truck demonstration.
+            </p>
+            {onLoadSample && (
+              <button
+                type="button"
+                onClick={onLoadSample}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-500 shadow-md transition"
+              >
+                ✨ Load Sample Demo Cargo (36 Euro Pallets & Demi)
+              </button>
+            )}
           </div>
         ) : (
           <div className="w-full">
